@@ -6,8 +6,11 @@ class CommonsApi_SiteController extends Omeka_Controller_AbstractActionControlle
     public function updateAction()
     {
         $data = $_POST['data'];
-        debug(print_r($data, true));
-        $sites = get_db()->getTable('Site')->findBy(array('key'=>$data['api_key']));
+        if(!isset($data['api_key']) || !$data['api_key']) {
+            $response = array('status'=>'ERROR', 'message'=>'You must have a valid api key.');
+            $this->_helper->json($response);            
+        }
+        $sites = get_db()->getTable('Site')->findBy(array('api_key'=>$data['api_key']));
         if(empty($sites)) {
             $response = array('status'=>'ERROR', 'message'=>'The api key does not exist.');
             $this->_helper->json($response);
@@ -20,6 +23,15 @@ class CommonsApi_SiteController extends Omeka_Controller_AbstractActionControlle
                 die();
             }
         }       
+        if(!empty($_FILES['logo']['name'])) {
+            $fileName = $site->id  .  '/' . $_FILES['logo']['name'];
+            $filePath = PLUGIN_DIR . '/Sites/views/public/images/' . $fileName;
+            if(!move_uploaded_file($_FILES['logo']['tmp_name'], $filePath)) {
+                debug('Could not save the file to ' . $filePath);
+                $this->status[] = array('status'=>'ERROR', 'message'=>'Could not save the file to ' . $filePath );
+            }
+            $this->site->commons_settings['logo'] = WEB_ROOT . '/plugins/Sites/views/public/images/' . $fileName;
+        }
         $response = array('status'=>'OK', 'message'=>'Your site information has been updated');
         $this->_helper->json($response);
     }
@@ -28,6 +40,21 @@ class CommonsApi_SiteController extends Omeka_Controller_AbstractActionControlle
     {
         $data = $_POST['data'];
         debug(print_r($data, true));
+        $sites = $this->_helper->db->getTable('Site')->findBy(array('url'=>$data['url']));
+        if(!empty($sites)) {
+            //check if an api key has not been assigned. if not, it means not approved
+            //if so, it means they haven't entered it yet, since the commons plugin uses update if key is set 
+            $site = $sites[0];
+            if($site->api_key) {
+                $response = array('status'=>'EXISTS', 'message'=>'Your site has been approved. You should have received instructions for entering your API key.');
+                $this->_helper->json($response);
+            } else {
+                $response = array('status'=>'EXISTS', 'message'=>'Your site is still awaiting approval.');
+                $this->_helper->json($response);
+            }
+            die();
+        }
+        
         $site = new Site();
         
         foreach($data as $key=>$value) {
