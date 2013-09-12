@@ -32,14 +32,21 @@ class CommonsApi_SiteController extends Omeka_Controller_AbstractActionControlle
             }
             $this->site->commons_settings['logo'] = WEB_ROOT . '/plugins/Sites/views/public/images/' . $fileName;
         }
-        $response = array('status'=>'OK', 'message'=>'Your site information has been updated');
+        foreach($data as $key=>$value) {
+            $site->$key = $value;
+        }
+        try {
+            $site->save(true);
+            $response = array('status'=>'OK', 'message'=>'Your site information has been updated');
+        } catch(Exception $e) {
+            $response = array('status'=>'ERROR', 'message'=>$e->getMessage());
+        }
         $this->_helper->json($response);
     }
     
     public function applyAction()
     {
         $data = $_POST['data'];
-        debug(print_r($data, true));
         $sites = $this->_helper->db->getTable('Site')->findBy(array('url'=>$data['url']));
         if(!empty($sites)) {
             //check if an api key has not been assigned. if not, it means not approved
