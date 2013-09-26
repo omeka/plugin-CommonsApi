@@ -63,18 +63,6 @@ class CommonsApi_ImportController extends Omeka_Controller_AbstractActionControl
                 }
             }
 
-            if(isset($data['exhibits'])) {
-                foreach($data['exhibits'] as $index=>$exhibitData) {
-                    try {
-                        $this->importer->processContext($data['exhibits'][$index]['exhibit'], 'Exhibit');
-                        $this->importer->processContext($data['exhibits'][$index]['section'], 'ExhibitSection');
-                        $this->importer->processContext($data['exhibits'][$index]['page'], 'ExhibitSectionPage');
-                    } catch (Exception $e) {
-                        _log($e);
-                    }
-                }
-            }
-
             if(!empty($data['items'])) {
                 foreach($data['items'] as $item) {
                     try {

@@ -13,6 +13,7 @@ class CommonsApi_Importer
 
     public function __construct($data)
     {
+        debug('constructing');
         if(! is_array($data)) {
             $data = json_decode($data, true);
         }
@@ -22,6 +23,7 @@ class CommonsApi_Importer
 
         $this->data = $data;
         if($this->setSite()) {
+            debug('set site');
             $this->processSite();
         }
 
@@ -42,24 +44,13 @@ class CommonsApi_Importer
                 _log('Could not save the file to ' . $filePath);
                 $this->status[] = array('status'=>'error', 'messages'=>'Could not save the file to ' . $filePath );
             }
-            $this->site->branding['logo'] = WEB_ROOT . '/plugins/Sites/views/public/images/' . $fileName;
-        }
-
-        if(!empty($_FILES['banner']['name'])) {
-            $fileName = $this->site->id . '/' . $_FILES['banner']['name'];
-            $filePath = PLUGIN_DIR . '/Sites/views/public/images/' . $fileName;
-            if(!move_uploaded_file($_FILES['banner']['tmp_name'], $filePath)) {
-                _log('Could not save the file to ' . $filePath);
-                $this->status[] = array('status'=>'error', 'messages'=>'Could not save the file to ' . $filePath );
-            }
-            $this->site->branding['banner'] = WEB_ROOT . '/plugins/Sites/views/public/images/' . $fileName;
+            $settings = json_decode($site->commons_settings, true);
+            $settings['logo'] = $_FILES['logo']['name'];
+            debug(print_r($settings, true));
+            $site->commons_settings = json_encode($settings);
         }
 
         $this->site->last_import = Zend_Date::now()->toString('yyyy-MM-dd HH:mm:ss');
-        $data = $this->preprocessSiteCss($this->data['site']);
-        foreach($data as $field=>$value) {
-            $this->site->$field = $value;
-        }
         $this->site->save();
     }
 
@@ -88,7 +79,6 @@ class CommonsApi_Importer
         $siteItem->orig_id = $data['orig_id'];
         $siteItem->item_id = $item->id;
         $siteItem->url = $data['url'];
-        $siteItem->license = $data['license'];
         try {
             $siteItem->save();
             $this->status['items'][$siteItem->orig_id] = array('status'=>'ok', 'commons_id'=>$item->id, 'status_message'=>'OK');
@@ -141,9 +131,9 @@ class CommonsApi_Importer
         $contextRecord->last_update = Zend_Date::now()->toString('yyyy-MM-dd HH:mm:ss');
         try {
             $contextRecord->save();
-            $this->status[$context . 's'][$contextRecord->id] = array('status'=>'ok', 'commons_id'=>$contextRecord->id, 'status_message'=>'OK');
+            $this->status[$context . 's'][$contextRecord->orig_id] = array('status'=>'ok', 'commons_id'=>$contextRecord->id, 'status_message'=>'OK');
         } catch(Exception $e) {
-            $this->status[$context . 's'][$contextRecord->id] = array('status'=>'fail', 'commons_id'=>$contextRecord->id, 'status_message'=>$e->getMessage());
+            $this->status[$context . 's'][$contextRecord->orig_id] = array('status'=>'fail', 'commons_id'=>$contextRecord->id, 'status_message'=>$e->getMessage());
         }
 
         return $contextRecord;
@@ -290,9 +280,10 @@ class CommonsApi_Importer
             if($itemType->name != $itemTypeData['name']) {
                 $itemType->name = $itemTypeData['name'];
             }
-
-            if( $itemType->description != $itemTypeData['description'] ) {
-                $itemType->description = $itemTypeData['description'];
+            if(isset($itemTypeData['description'])) {
+                if( $itemType->description != $itemTypeData['description'] ) {
+                    $itemType->description = $itemTypeData['description'];
+                }
             }
             $itemType->save();
         }
@@ -317,8 +308,6 @@ class CommonsApi_Importer
                 }
             }
         }
-
-        //@TODO: updating elements
     }
 
     public function importItemType($itemTypeData)
@@ -350,6 +339,7 @@ class CommonsApi_Importer
 
     public function setSite()
     {
+        debug('setting site');
         $sites = get_db()->getTable('Site')->findBy(array('url'=> $this->data['site_url']), 1);
         if(empty($sites)) {
             $this->status['status'] = 'error';
@@ -361,7 +351,7 @@ class CommonsApi_Importer
 
         $site = $sites[0];
 
-        if(is_null($site->added)) {
+        if(is_null($site->date_approved)) {
             $this->status['status'] = 'error';
             $this->status['messages'] = 'Site not yet approved. Check back later';
             $this->hasErrors = true;
@@ -382,11 +372,4 @@ class CommonsApi_Importer
         return true;
     }
 
-    public function preprocessSiteCss($data)
-    {
-        $css = "h1 {color: " . $data['commons_title_color'] .  "; }";
-        $data['css'] = $css;
-        unset($data['commons_title_color']);
-        return $data;
-    }
 }

@@ -5,7 +5,9 @@ class CommonsApi_SiteController extends Omeka_Controller_AbstractActionControlle
 
     public function updateAction()
     {
+        
         $data = $_POST['data'];
+        debug(print_r($data, true));
         if(!isset($data['api_key']) || !$data['api_key']) {
             $response = array('status'=>'ERROR', 'message'=>'You must have a valid api key.');
             $this->_helper->json($response);            
@@ -22,15 +24,16 @@ class CommonsApi_SiteController extends Omeka_Controller_AbstractActionControlle
                 $this->_helper->json($response);
                 die();
             }
-        }       
+        }   
+
         if(!empty($_FILES['logo']['name'])) {
+            
             $fileName = $site->id  .  '/' . $_FILES['logo']['name'];
             $filePath = PLUGIN_DIR . '/Sites/views/public/images/' . $fileName;
             if(!move_uploaded_file($_FILES['logo']['tmp_name'], $filePath)) {
-                debug('Could not save the file to ' . $filePath);
                 $this->status[] = array('status'=>'ERROR', 'message'=>'Could not save the file to ' . $filePath );
             }
-            $this->site->commons_settings['logo'] = WEB_ROOT . '/plugins/Sites/views/public/images/' . $fileName;
+            $site->commons_settings['logo'] = $_FILES['logo']['name'];
         }
         foreach($data as $key=>$value) {
             $site->$key = $value;
@@ -52,14 +55,13 @@ class CommonsApi_SiteController extends Omeka_Controller_AbstractActionControlle
             //check if an api key has not been assigned. if not, it means not approved
             //if so, it means they haven't entered it yet, since the commons plugin uses update if key is set 
             $site = $sites[0];
-            if($site->api_key) {
+            if($site->date_approved) {
                 $response = array('status'=>'EXISTS', 'message'=>'Your site has been approved. You should have received instructions for entering your API key.');
                 $this->_helper->json($response);
             } else {
                 $response = array('status'=>'EXISTS', 'message'=>'Your site is still awaiting approval.');
                 $this->_helper->json($response);
             }
-            die();
         }
         
         $site = new Site();
