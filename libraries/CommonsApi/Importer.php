@@ -13,7 +13,6 @@ class CommonsApi_Importer
 
     public function __construct($data)
     {
-        debug('constructing');
         if(! is_array($data)) {
             $data = json_decode($data, true);
         }
@@ -23,7 +22,6 @@ class CommonsApi_Importer
 
         $this->data = $data;
         if($this->setSite()) {
-            debug('set site');
             $this->processSite();
         }
 
@@ -33,20 +31,19 @@ class CommonsApi_Importer
 
     public function processSite()
     {
-        if(!is_dir(PLUGIN_DIR . '/Sites/views/public/images/' . $this->site->id)) {
-            mkdir(PLUGIN_DIR . '/Sites/views/public/images/' . $this->site->id);
+        if(!is_dir(PLUGIN_DIR . '/Sites/views/shared/images/' . $this->site->id)) {
+            mkdir(PLUGIN_DIR . '/Sites/views/shared/images/' . $this->site->id);
         }
 
         if(!empty($_FILES['logo']['name'])) {
             $fileName = $this->site->id  .  '/' . $_FILES['logo']['name'];
-            $filePath = PLUGIN_DIR . '/Sites/views/public/images/' . $fileName;
+            $filePath = PLUGIN_DIR . '/Sites/views/shared/images/' . $fileName;
             if(!move_uploaded_file($_FILES['logo']['tmp_name'], $filePath)) {
                 _log('Could not save the file to ' . $filePath);
                 $this->status[] = array('status'=>'error', 'messages'=>'Could not save the file to ' . $filePath );
             }
             $settings = json_decode($site->commons_settings, true);
             $settings['logo'] = $_FILES['logo']['name'];
-            debug(print_r($settings, true));
             $site->commons_settings = json_encode($settings);
         }
 
@@ -339,7 +336,6 @@ class CommonsApi_Importer
 
     public function setSite()
     {
-        debug('setting site');
         $sites = get_db()->getTable('Site')->findBy(array('url'=> $this->data['site_url']), 1);
         if(empty($sites)) {
             $this->status['status'] = 'error';

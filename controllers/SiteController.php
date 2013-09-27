@@ -7,7 +7,6 @@ class CommonsApi_SiteController extends Omeka_Controller_AbstractActionControlle
     {
         
         $data = $_POST['data'];
-        debug(print_r($data, true));
         if(!isset($data['api_key']) || !$data['api_key']) {
             $response = array('status'=>'ERROR', 'message'=>'You must have a valid api key.');
             $this->_helper->json($response);            
@@ -29,7 +28,7 @@ class CommonsApi_SiteController extends Omeka_Controller_AbstractActionControlle
         if(!empty($_FILES['logo']['name'])) {
             
             $fileName = $site->id  .  '/' . $_FILES['logo']['name'];
-            $filePath = PLUGIN_DIR . '/Sites/views/public/images/' . $fileName;
+            $filePath = PLUGIN_DIR . '/Sites/views/shared/images/' . $fileName;
             if(!move_uploaded_file($_FILES['logo']['tmp_name'], $filePath)) {
                 $this->status[] = array('status'=>'ERROR', 'message'=>'Could not save the file to ' . $filePath );
             }
