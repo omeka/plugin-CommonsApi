@@ -39,6 +39,8 @@ class CommonsApiPlugin extends Omeka_Plugin_AbstractPlugin
         $acl = $args['acl'];
         $acl->addResource('CommonsApi_Import');
         $acl->allow(null, 'CommonsApi_Import', 'index', new CommonsApiAclAssertion);
+        $acl->allow(null, 'CommonsApi_Import', 'privatize-item', new CommonsApiAclAssertion);
+        $acl->allow(null, 'CommonsApi_Import', 'privatize-collection', new CommonsApiAclAssertion);
     }
 
 }
