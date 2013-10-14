@@ -29,6 +29,9 @@ class CommonsApi_SiteController extends Omeka_Controller_AbstractActionControlle
             
             $fileName = $site->id  .  '/' . $_FILES['logo']['name'];
             $filePath = PLUGIN_DIR . '/Sites/views/shared/images/' . $fileName;
+            if(!file_exists(SITES_PLUGIN_DIR . '/views/shared/images/' . $site->id)) {
+                mkdir(SITES_PLUGIN_DIR . '/views/shared/images/' . $site->id, 0755);
+            }            
             if(!move_uploaded_file($_FILES['logo']['tmp_name'], $filePath)) {
                 $this->status[] = array('status'=>'ERROR', 'message'=>'Could not save the file to ' . $filePath );
             }
