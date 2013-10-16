@@ -181,12 +181,12 @@ class CommonsApi_Importer
             }
         }
         $transferStrategy = 'Url';
-        $options = array( );
+        $options = array();
         try {
             insert_files_for_item($item, $transferStrategy, $filesData, $options);
         } catch (Exception $e) {
             _log($e);
-            $this->status[] = array('status'=>'error', 'item'=>$item->id, 'error'=>$e);
+            $this->status['files'][] = array('status'=>'error', 'commons_item_id'=>$item->id, 'status_message'=>$e->getMessage());
         }
     }
 
