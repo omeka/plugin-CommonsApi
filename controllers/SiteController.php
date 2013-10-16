@@ -38,6 +38,7 @@ class CommonsApi_SiteController extends Omeka_Controller_AbstractActionControlle
             $site->commons_settings['logo'] = $_FILES['logo']['name'];
         }
         foreach($data as $key=>$value) {
+            debug($key . ' ' . $value);
             $site->$key = $value;
         }
         try {

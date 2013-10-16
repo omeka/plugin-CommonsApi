@@ -13,6 +13,7 @@ class CommonsApi_Importer
 
     public function __construct($data)
     {
+        debug('start import');
         if(! is_array($data)) {
             $data = json_decode($data, true);
         }
@@ -54,6 +55,7 @@ class CommonsApi_Importer
 
     public function processItem($data)
     {
+        debug('process item');
         $siteItem = $this->db->getTable('SiteItem')->findBySiteIdAndOrigId($this->site->id, $data['orig_id']);
 
         if($siteItem) {
@@ -167,6 +169,7 @@ class CommonsApi_Importer
 
     public function processItemFiles($item, $filesData)
     {
+        debug('process Item files');
         //check if files have already been imported
         $fileTable = $this->db->getTable('File');
         foreach($filesData as $index=>$fileName) {

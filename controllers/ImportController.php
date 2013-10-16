@@ -48,7 +48,7 @@ class CommonsApi_ImportController extends Omeka_Controller_AbstractActionControl
 
     public function indexAction()
     {
-        
+        debug('controller begin import');
         $data = json_decode($_POST['data'], true);
         
         if(!$this->importer->hasErrors) {
