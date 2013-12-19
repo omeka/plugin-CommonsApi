@@ -5,11 +5,11 @@ class CommonsApi_SiteController extends Omeka_Controller_AbstractActionControlle
 
     public function updateAction()
     {
-        
+
         $data = $_POST['data'];
         if(!isset($data['api_key']) || !$data['api_key']) {
             $response = array('status'=>'ERROR', 'message'=>'You must have a valid api key.');
-            $this->_helper->json($response);            
+            $this->_helper->json($response);
         }
         $sites = get_db()->getTable('Site')->findBy(array('api_key'=>$data['api_key']));
         if(empty($sites)) {
@@ -23,15 +23,14 @@ class CommonsApi_SiteController extends Omeka_Controller_AbstractActionControlle
                 $this->_helper->json($response);
                 die();
             }
-        }   
+        }
 
         if(!empty($_FILES['logo']['name'])) {
-            
             $fileName = $site->id  .  '/' . $_FILES['logo']['name'];
             $filePath = PLUGIN_DIR . '/Sites/views/shared/images/' . $fileName;
             if(!file_exists(SITES_PLUGIN_DIR . '/views/shared/images/' . $site->id)) {
                 mkdir(SITES_PLUGIN_DIR . '/views/shared/images/' . $site->id, 0755);
-            }            
+            }
             if(!move_uploaded_file($_FILES['logo']['tmp_name'], $filePath)) {
                 $this->status[] = array('status'=>'ERROR', 'message'=>'Could not save the file to ' . $filePath );
             }
@@ -49,14 +48,14 @@ class CommonsApi_SiteController extends Omeka_Controller_AbstractActionControlle
         }
         $this->_helper->json($response);
     }
-    
+
     public function applyAction()
     {
         $data = $_POST['data'];
         $sites = $this->_helper->db->getTable('Site')->findBy(array('url'=>$data['url']));
         if(!empty($sites)) {
             //check if an api key has not been assigned. if not, it means not approved
-            //if so, it means they haven't entered it yet, since the commons plugin uses update if key is set 
+            //if so, it means they haven't entered it yet, since the commons plugin uses update if key is set
             $site = $sites[0];
             if($site->date_approved) {
                 $response = array('status'=>'EXISTS', 'message'=>'Your site has been approved. You should have received instructions for entering your API key.');
@@ -66,19 +65,28 @@ class CommonsApi_SiteController extends Omeka_Controller_AbstractActionControlle
                 $this->_helper->json($response);
             }
         }
-        
         $site = new Site();
-        
         foreach($data as $key=>$value) {
             $site->$key = $value;
         }
         $salt = substr(md5(mt_rand()), 0, 16);
         $site->api_key = sha1($salt . $site->url . microtime() );
 
-        //@TODO: figure out when to create the site's user
-        $site->owner_id = 1;
+        $this->createSiteAdminUser($site);
         $site->save();
         $response = array('status'=>'OK', 'message'=>'Check your email for info about the next steps');
         $this->_helper->json($response);
+    }
+
+    protected function createSiteAdminUser($site)
+    {
+        $user = new User();
+        $user->role = 'site-admin';
+        $user->name = $site->admin_name;
+        $user->username = $site->admin_name;
+        $user->email = $site->admin_email;
+        $user->active = 1;
+        $user->save();
+        $site->owner_id = $user->id;
     }
 }
