@@ -83,7 +83,10 @@ class CommonsApi_SiteController extends Omeka_Controller_AbstractActionControlle
         $user = new User();
         $user->role = 'site-admin';
         $user->name = $site->admin_name;
-        $user->username = $site->admin_name;
+        $username = $site->admin_email;
+        $username = str_replace('@', 'AT', $username);
+        $username = str_replace('.', 'DOT', $username);
+        $user->username = $username;
         $user->email = $site->admin_email;
         $user->active = 1;
         $user->save();
