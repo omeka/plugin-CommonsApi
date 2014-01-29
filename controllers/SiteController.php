@@ -87,6 +87,8 @@ class CommonsApi_SiteController extends Omeka_Controller_AbstractActionControlle
         $user->email = $site->admin_email;
         $user->active = 1;
         $user->save();
+        $activation = UsersActivations::factory($user);
+        $activation->save();
         $site->owner_id = $user->id;
     }
 }
