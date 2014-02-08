@@ -60,6 +60,7 @@ class CommonsApi_Importer
 
         if($siteItem) {
             $item = $siteItem->findItem();
+            $item->setOwner($this->site->getOwner());
             $this->updateItem($item, $data);
         } else {
             $item = $this->importItem($data);
@@ -98,7 +99,9 @@ class CommonsApi_Importer
 
         //build relations to exhibit data
         //exhibits are imported before items, so they should already exist.
+        // we punted on Exhibits for first release
 
+        /*
         if(isset($data['exhibitPages'])) {
             foreach($data['exhibitPages'] as $pageId) {
                 $pageContext = $this->db->getTable('SiteContext_ExhibitSectionPage')->findBySiteIdAndOrigId($this->site->id,$pageId);
@@ -113,6 +116,7 @@ class CommonsApi_Importer
                 $this->buildRelation($siteItem, $exhibitContext);
             }
         }
+        */
     }
 
     public function processContext($data, $context)
