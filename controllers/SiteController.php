@@ -72,14 +72,30 @@ class CommonsApi_SiteController extends Omeka_Controller_AbstractActionControlle
         $salt = substr(md5(mt_rand()), 0, 16);
         $site->api_key = sha1($salt . $site->url . microtime() );
 
-        $this->createSiteAdminUser($site);
+        if(! $this->createSiteAdminUser($site) ) {
+            $response = array('status'=>'WARNING', 'message'=>'A user with that email exists. Log in to the Commons with that account to connect the site with the user after the site has been approved');
+        } else {
+            $response = array('status'=>'OK', 'message'=>'Check your email for info about the next steps');
+        }
         $site->save();
-        $response = array('status'=>'OK', 'message'=>'Check your email for info about the next steps');
         $this->_helper->json($response);
     }
 
     protected function createSiteAdminUser($site)
     {
+        //check to see if a user with that email address already exists
+        //this could happen when the same person manages several site
+        //contributing to Commons
+        //give a message back that that user-email exists
+        //let them be the owner of a site with a management tool in Commons
+        //there, they should have a means to claim ownership of the site
+        //based on the key sent back?
+
+        $user = $this->_helper->getDb()->getTable('User')->findByEmail($site->admin_email);
+        if(!empty($user)) {
+            return false;
+        }
+
         $user = new User();
         $user->role = 'site-admin';
         $user->name = $site->admin_name;
