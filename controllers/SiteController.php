@@ -91,7 +91,7 @@ class CommonsApi_SiteController extends Omeka_Controller_AbstractActionControlle
         //there, they should have a means to claim ownership of the site
         //based on the key sent back?
 
-        $user = $this->_helper->getDb()->getTable('User')->findByEmail($site->admin_email);
+        $user = $this->_helper->db->getTable('User')->findByEmail($site->admin_email);
         if(!empty($user)) {
             return false;
         }
