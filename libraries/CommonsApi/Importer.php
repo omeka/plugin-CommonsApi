@@ -223,7 +223,14 @@ class CommonsApi_Importer
         unset($itemMetadata['tags']);
         $itemElementTexts = $this->processItemElements($data);
         $itemMetadata['public'] = true;
+        $itemTypeOrigName = $itemMetadata['itemTypeName'];
+        $itemTypeCommonsName = $this->site->url . '/customItemTypes/' . Inflector::underscore($itemTypeOrigName);
+        $itemType = get_db()->getTable('ItemType')->findByName($itemTypeCommonsName);
+        $this->processItemTypeElements($itemType, $data["$itemTypeCommonsName Item Type Metadata"]);
+        $itemMetadata['item_type_name'] = $itemTypeCommonsName;         
+
         try {
+            debug('insert item');
             $item = insert_item($itemMetadata, $itemElementTexts);
         } catch (Exception $e) {
             _log($e);
@@ -244,8 +251,6 @@ class CommonsApi_Importer
         $this->processItemTypeElements($itemType, $data["$itemTypeCommonsName Item Type Metadata"]);
         $itemMetadata['item_type_name'] = $itemTypeCommonsName; 
         $itemElementTexts = $this->processItemElements($data);
-//debug(print_r($itemMetadata, true));
-//debug(print_r($itemElementTexts, true));
         try {
             update_item($item, $itemMetadata, $itemElementTexts);
         } catch (Exception $e) {
