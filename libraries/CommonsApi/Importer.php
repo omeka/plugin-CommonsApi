@@ -14,9 +14,11 @@ class CommonsApi_Importer
     public function __construct($data)
     {
         debug('start import');
+        
         if(! is_array($data)) {
             $data = json_decode($data, true);
         }
+        //debug(print_r($data, true));
         $this->site['items'] = array();
         $this->site['collections'] = array();
         $this->db = get_db();
@@ -221,7 +223,6 @@ class CommonsApi_Importer
         unset($itemMetadata['tags']);
         $itemElementTexts = $this->processItemElements($data);
         $itemMetadata['public'] = true;
-
         try {
             $item = insert_item($itemMetadata, $itemElementTexts);
         } catch (Exception $e) {
@@ -237,7 +238,14 @@ class CommonsApi_Importer
         $itemMetadata['overwriteElementTexts'] = true;
         unset($itemMetadata['tags']);
         $itemMetadata['public'] = true;
+        $itemTypeOrigName = $itemMetadata['itemTypeName'];
+        $itemTypeCommonsName = $this->site->url . '/customItemTypes/' . Inflector::underscore($itemTypeOrigName);
+        $itemType = get_db()->getTable('ItemType')->findByName($itemTypeCommonsName);
+        $this->processItemTypeElements($itemType, $data["$itemTypeCommonsName Item Type Metadata"]);
+        $itemMetadata['item_type_name'] = $itemTypeCommonsName; 
         $itemElementTexts = $this->processItemElements($data);
+//debug(print_r($itemMetadata, true));
+//debug(print_r($itemElementTexts, true));
         try {
             update_item($item, $itemMetadata, $itemElementTexts);
         } catch (Exception $e) {
@@ -261,7 +269,6 @@ class CommonsApi_Importer
                 $newElementTexts[$elSet] = $elTexts;
             }
         }
-
         return $newElementTexts;
         //@TODO: prefix custom elements somewhere
     }
@@ -273,7 +280,6 @@ class CommonsApi_Importer
         if(is_string($data)) {
             $itemTypeData = $this->parseSiteItemTypeData($data);
         }
-
         $itemTypesTable = $this->db->getTable('ItemType');
         $itemType = $itemTypesTable->findByName($itemTypeData['name']);
 
@@ -291,7 +297,7 @@ class CommonsApi_Importer
             }
             $itemType->save();
         }
-
+debug('done processItemType');
         return $itemType;
 
     }
@@ -299,19 +305,30 @@ class CommonsApi_Importer
     public function processItemTypeElements($itemType, $data)
     {
         //make sure the elements exist and are updated
+        $elementsArray = array();
+        $elementsMetadataArray = array();
+        $elementTable = get_db()->getTable('Element');
         foreach($data as $elName=>$elData) {
             if(! $itemType->hasElement($elName)) {
-                $elData['name'] = $elName;
-
-                $elementArray = array(array('name'=>$elData['name']));
-                try {
-                    $itemType->addElements($elementArray);
-                } catch (Exception $e) {
-                    _log($e);
-                    $this->addError(array('item'=>$item->id, 'error'=>$e));
+                debug('hasnt element ' . $elName);
+                $el = $elementTable->findByElementSetNameAndElementName('Item Type Metadata', $elName);
+                if($el) {
+                    $elementsArray[] = $el;
+                } else {
+                    $elementsArray[] = array('name'=>$elName);    
                 }
+                //@todo see about sending/receiving more of the element data, especially description
+                
             }
         }
+        try {
+            $itemType->addElements($elementsArray);
+            $itemType->addElements($elementsMetadataArray);
+            $itemType->save();
+        } catch (Exception $e) {
+            _log($e);
+            $this->addError(array('item'=>$item->id, 'error'=>$e));
+        }        
     }
 
     public function importItemType($itemTypeData)
@@ -334,7 +351,7 @@ class CommonsApi_Importer
         if($offset !== false) {
             $name = substr($name, 0, $offset);
         }
-        $returnArray['name'] = $this->site->url . '/customItemTypes/' . $name;
+        $returnArray['name'] = $this->site->url . '/customItemTypes/' . Inflector::underscore($name);
         if($description) {
             $returnArray['description'] = $description;
         }
