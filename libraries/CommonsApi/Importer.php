@@ -13,12 +13,9 @@ class CommonsApi_Importer
 
     public function __construct($data)
     {
-        debug('start import');
-        
         if(! is_array($data)) {
             $data = json_decode($data, true);
         }
-        //debug(print_r($data, true));
         $this->site['items'] = array();
         $this->site['collections'] = array();
         $this->db = get_db();
@@ -57,7 +54,6 @@ class CommonsApi_Importer
 
     public function processItem($data)
     {
-        debug('process item');
         $siteItem = $this->db->getTable('SiteItem')->findBySiteIdAndOrigId($this->site->id, $data['orig_id']);
 
         if($siteItem) {
@@ -175,7 +171,6 @@ class CommonsApi_Importer
 
     public function processItemFiles($item, $filesData)
     {
-        debug('process Item files');
         //check if files have already been imported
         $fileTable = $this->db->getTable('File');
         foreach($filesData as $index=>$fileName) {
@@ -198,10 +193,6 @@ class CommonsApi_Importer
 
     public function processItemTags($item, $tags)
     {
-        $item->addTags($tags);
-        //maybe make core return tags when added?
-        $tags = $item->getTags();
-
         $usesTag = $this->db->getTable('RecordRelationsProperty')->findByVocabAndPropertyName('http://ns.omeka-commons.org/', 'usesTag');
         //build the relations using omeka:usesTag property
         foreach($tags as $tag) {
@@ -220,7 +211,6 @@ class CommonsApi_Importer
     public function importItem($data)
     {
         $itemMetadata = $data;
-        unset($itemMetadata['tags']);
         $itemElementTexts = $this->processItemElements($data);
         $itemMetadata['public'] = true;
         $itemTypeOrigName = $itemMetadata['itemTypeName'];
@@ -230,7 +220,6 @@ class CommonsApi_Importer
         $itemMetadata['item_type_name'] = $itemTypeCommonsName;         
 
         try {
-            debug('insert item');
             $item = insert_item($itemMetadata, $itemElementTexts);
         } catch (Exception $e) {
             _log($e);
@@ -243,7 +232,6 @@ class CommonsApi_Importer
     {
         $itemMetadata = $data;
         $itemMetadata['overwriteElementTexts'] = true;
-        unset($itemMetadata['tags']);
         $itemMetadata['public'] = true;
         $itemTypeOrigName = $itemMetadata['itemTypeName'];
         $itemTypeCommonsName = $this->site->url . '/customItemTypes/' . Inflector::underscore($itemTypeOrigName);
@@ -302,7 +290,6 @@ class CommonsApi_Importer
             }
             $itemType->save();
         }
-debug('done processItemType');
         return $itemType;
 
     }
@@ -315,7 +302,6 @@ debug('done processItemType');
         $elementTable = get_db()->getTable('Element');
         foreach($data as $elName=>$elData) {
             if(! $itemType->hasElement($elName)) {
-                debug('hasnt element ' . $elName);
                 $el = $elementTable->findByElementSetNameAndElementName('Item Type Metadata', $elName);
                 if($el) {
                     $elementsArray[] = $el;
