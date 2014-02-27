@@ -67,8 +67,13 @@ class CommonsApi_SiteController extends Omeka_Controller_AbstractActionControlle
         }
         $site = new Site();
         foreach($data as $key=>$value) {
-            $site->$key = $value;
+            if($key != 'commons_settings') {
+                $trimmedKey = str_replace('commons_', '', $key);
+            }
+            $site->$trimmedKey = $value;
         }
+        $site->flagged = 0;
+        $site->super_email = $data['administrator_email'];
         $salt = substr(md5(mt_rand()), 0, 16);
         $site->api_key = sha1($salt . $site->url . microtime() );
 
@@ -95,7 +100,7 @@ class CommonsApi_SiteController extends Omeka_Controller_AbstractActionControlle
         if(!empty($user)) {
             return false;
         }
-
+debug(print_r($site->toArray(), true));
         $user = new User();
         $user->role = 'site-admin';
         $user->name = $site->admin_name;
