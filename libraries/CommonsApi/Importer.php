@@ -54,13 +54,16 @@ class CommonsApi_Importer
 
     public function processItem($data)
     {
+        debug('processing Item');
         $siteItem = $this->db->getTable('SiteItem')->findBySiteIdAndOrigId($this->site->id, $data['orig_id']);
 
         if($siteItem) {
+            debug('has SiteItem');
             $item = $siteItem->findItem();
             $item->setOwner($this->site->getOwner());
             $this->updateItem($item, $data);
         } else {
+            debug('before importItem');
             $item = $this->importItem($data);
             $siteItem = new SiteItem();
             $siteItem->item_id = $item->id;
@@ -94,6 +97,8 @@ class CommonsApi_Importer
             $siteCollection = $this->db->getTable('SiteContext_Collection')->findBySiteIdAndOrigId($this->site->id,$data['collection']);
             $this->buildRelation($siteItem, $siteCollection);
         }
+        
+        debug('done processItem');
 
         //build relations to exhibit data
         //exhibits are imported before items, so they should already exist.
@@ -210,6 +215,8 @@ class CommonsApi_Importer
 
     public function importItem($data)
     {
+        debug('importItem');
+        debug(print_r($data, true));
         $itemMetadata = $data;
         $itemElementTexts = $this->processItemElements($data);
         $itemMetadata['public'] = true;
@@ -245,12 +252,11 @@ class CommonsApi_Importer
             _log($e);
             $this->status[] = array('status'=>'error', 'error'=>$e);
         }
-
-
     }
 
     public function processItemElements($data)
     {
+        debug('processItemElements');
         //process ItemTypes and ItemType Metadata to make sure they all exist first
         $newElementTexts = array();
         foreach($data['elementTexts'] as $elSet=>$elTexts) {
@@ -263,12 +269,11 @@ class CommonsApi_Importer
             }
         }
         return $newElementTexts;
-        //@TODO: prefix custom elements somewhere
     }
 
     public function processItemType($data)
     {
-
+debug('processItemType');
         //data might be a string if we're doing a pull from site, array if a push
         if(is_string($data)) {
             $itemTypeData = $this->parseSiteItemTypeData($data);
