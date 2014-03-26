@@ -54,16 +54,13 @@ class CommonsApi_Importer
 
     public function processItem($data)
     {
-        debug('processing Item');
         $siteItem = $this->db->getTable('SiteItem')->findBySiteIdAndOrigId($this->site->id, $data['orig_id']);
 
         if($siteItem) {
-            debug('has SiteItem');
             $item = $siteItem->findItem();
             $item->setOwner($this->site->getOwner());
             $this->updateItem($item, $data);
         } else {
-            debug('before importItem');
             $item = $this->importItem($data);
             $siteItem = new SiteItem();
             $siteItem->item_id = $item->id;
@@ -216,16 +213,18 @@ class CommonsApi_Importer
     public function importItem($data)
     {
         debug('importItem');
-        debug(print_r($data, true));
         $itemMetadata = $data;
-        $itemElementTexts = $this->processItemElements($data);
+        
         $itemMetadata['public'] = true;
-        $itemTypeOrigName = $itemMetadata['itemTypeName'];
-        $itemTypeCommonsName = $this->site->url . '/customItemTypes/' . Inflector::underscore($itemTypeOrigName);
-        $itemType = get_db()->getTable('ItemType')->findByName($itemTypeCommonsName);
-        $this->processItemTypeElements($itemType, $data["$itemTypeCommonsName Item Type Metadata"]);
-        $itemMetadata['item_type_name'] = $itemTypeCommonsName;         
-
+        
+        if(!empty($itemMetadata['itemTypeName'])) {
+            $itemTypeOrigName = $itemMetadata['itemTypeName'];
+            $itemTypeCommonsName = $this->site->url . '/customItemTypes/' . Inflector::underscore($itemTypeOrigName);
+            $itemType = get_db()->getTable('ItemType')->findByName($itemTypeCommonsName);
+            $this->processItemTypeElements($itemType, $data);
+            $itemMetadata['item_type_name'] = $itemTypeCommonsName;
+        }
+        $itemElementTexts = $this->processItemElements($data);
         try {
             $item = insert_item($itemMetadata, $itemElementTexts);
         } catch (Exception $e) {
@@ -240,11 +239,13 @@ class CommonsApi_Importer
         $itemMetadata = $data;
         $itemMetadata['overwriteElementTexts'] = true;
         $itemMetadata['public'] = true;
-        $itemTypeOrigName = $itemMetadata['itemTypeName'];
-        $itemTypeCommonsName = $this->site->url . '/customItemTypes/' . Inflector::underscore($itemTypeOrigName);
-        $itemType = get_db()->getTable('ItemType')->findByName($itemTypeCommonsName);
-        $this->processItemTypeElements($itemType, $data["$itemTypeCommonsName Item Type Metadata"]);
-        $itemMetadata['item_type_name'] = $itemTypeCommonsName; 
+        if(!empty($itemMetadata['itemTypeName'])) {
+            $itemTypeOrigName = $itemMetadata['itemTypeName'];
+            $itemTypeCommonsName = $this->site->url . '/customItemTypes/' . Inflector::underscore($itemTypeOrigName);            
+            //$this->processItemTypeElements($itemType, $data);
+            
+            $itemMetadata['item_type_name'] = $itemTypeCommonsName;
+        } 
         $itemElementTexts = $this->processItemElements($data);
         try {
             update_item($item, $itemMetadata, $itemElementTexts);
@@ -262,8 +263,9 @@ class CommonsApi_Importer
         foreach($data['elementTexts'] as $elSet=>$elTexts) {
             if(strpos($elSet, 'Item Type Metadata') !== false) {
                $itemType = $this->processItemType($elSet);
-               $newElementTexts['Item Type Metadata'] = $elTexts;
+               
                $this->processItemTypeElements($itemType, $elTexts);
+               $newElementTexts['Item Type Metadata'] = $elTexts;
             } else {
                 $newElementTexts[$elSet] = $elTexts;
             }
@@ -271,39 +273,40 @@ class CommonsApi_Importer
         return $newElementTexts;
     }
 
-    public function processItemType($data)
+    /**
+     * Makes sure the item type exists in the database for importing the item
+     * @param unknown_type $data
+     */
+    public function processItemType($itemTypeMetadataLongName)
     {
+        $offset = strpos($itemTypeMetadataLongName, ' Item Type Metadata');
+        if($offset !== false) {
+            $itemTypeOrigName = substr($itemTypeMetadataLongName, 0, $offset);
+        }        
 debug('processItemType');
+        $itemTypeCommonsName = $this->site->url . '/customItemTypes/' . Inflector::underscore($itemTypeOrigName);
         //data might be a string if we're doing a pull from site, array if a push
-        if(is_string($data)) {
-            $itemTypeData = $this->parseSiteItemTypeData($data);
-        }
         $itemTypesTable = $this->db->getTable('ItemType');
-        $itemType = $itemTypesTable->findByName($itemTypeData['name']);
+        $itemType = $itemTypesTable->findByName($itemTypeCommonsName);
 
         if(!$itemType) {
-            $itemType = $this->importItemType($itemTypeData);
-        } else {
-
-            if($itemType->name != $itemTypeData['name']) {
-                $itemType->name = $itemTypeData['name'];
-            }
-            if(isset($itemTypeData['description'])) {
-                if( $itemType->description != $itemTypeData['description'] ) {
-                    $itemType->description = $itemTypeData['description'];
-                }
-            }
+            $itemType = new ItemType();
+            $itemType->name = $itemTypeCommonsName;
             $itemType->save();
-        }
+        } 
         return $itemType;
-
     }
 
+    /**
+     * Makes sure that the imported Item Type Elements all exist in the database
+     * before trying to add them to the item
+     * @param unknown_type $itemType
+     * @param unknown_type $data
+     */
     public function processItemTypeElements($itemType, $data)
     {
         //make sure the elements exist and are updated
         $elementsArray = array();
-        $elementsMetadataArray = array();
         $elementTable = get_db()->getTable('Element');
         foreach($data as $elName=>$elData) {
             if(! $itemType->hasElement($elName)) {
@@ -311,47 +314,17 @@ debug('processItemType');
                 if($el) {
                     $elementsArray[] = $el;
                 } else {
-                    $elementsArray[] = array('name'=>$elName);    
+                    $elementsArray[] = array('name'=>$elName);
                 }
-                //@todo see about sending/receiving more of the element data, especially description
-                
             }
         }
         try {
             $itemType->addElements($elementsArray);
-            $itemType->addElements($elementsMetadataArray);
             $itemType->save();
         } catch (Exception $e) {
             _log($e);
             $this->addError(array('item'=>$item->id, 'error'=>$e));
-        }        
-    }
-
-    public function importItemType($itemTypeData)
-    {
-        $itemType = new ItemType();
-        $itemType->name = $itemTypeData['name'];
-        if(isset($itemTypeData['description'])) {
-            $itemType->description = $itemTypeData['description'];
         }
-        $itemType->save();
-        return $itemType;
-    }
-
-    public function parseSiteItemTypeData($name, $description = null)
-    {
-        $returnArray = array();
-
-        //remove the 'Item Type Metadata' if it's there from how Commons exports
-        $offset = strpos($name, ' Item Type Metadata');
-        if($offset !== false) {
-            $name = substr($name, 0, $offset);
-        }
-        $returnArray['name'] = $this->site->url . '/customItemTypes/' . Inflector::underscore($name);
-        if($description) {
-            $returnArray['description'] = $description;
-        }
-        return $returnArray;
     }
 
     public function setSite()

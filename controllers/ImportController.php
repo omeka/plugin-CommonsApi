@@ -51,12 +51,10 @@ class CommonsApi_ImportController extends Omeka_Controller_AbstractActionControl
         debug('controller begin import');
         $data = json_decode($_POST['data'], true);
         
-        debug('indexAction 54 ' . print_r($data, true));
         if(!$this->importer->hasErrors) {
 
             if(isset($data['collections'])) {
                 foreach($data['collections'] as $collectionData) {
-                    debug('iA Collections ' . print_r($collectionData, true));
                     try {
                         $this->importer->processContext($collectionData, 'Collection');
                     } catch (Exception $e) {
@@ -67,7 +65,6 @@ class CommonsApi_ImportController extends Omeka_Controller_AbstractActionControl
 
             if(!empty($data['items'])) {
                 foreach($data['items'] as $item) {
-                    debug('iA Items ' . print_($item->toArray(), true));
                     try {
                         $this->importer->processItem($item);
                     } catch (Exception $e) {
