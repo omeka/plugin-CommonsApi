@@ -77,12 +77,14 @@ class CommonsApi_SiteController extends Omeka_Controller_AbstractActionControlle
         $salt = substr(md5(mt_rand()), 0, 16);
         $site->api_key = sha1($salt . $site->url . microtime() );
 
-        if(! $this->createSiteAdminUser($site) ) {
+        if(! $user = $this->createSiteAdminUser($site) ) {
             $response = array('status'=>'WARNING', 'message'=>'A user with that email exists. Log in to the Commons with that account to connect the site with the user after the site has been approved');
         } else {
             $response = array('status'=>'OK', 'message'=>'Check your email for info about the next steps');
         }
-        $site->save();
+        debug('userid ' . $user->id);
+        $site->owner_id = $user->id;
+        $site->save(true);
         $this->_helper->json($response);
     }
 
@@ -110,10 +112,9 @@ debug(print_r($site->toArray(), true));
         $user->username = $username;
         $user->email = $site->admin_email;
         $user->active = 1;
-        $user->save();
+        $user->save(true);
         $activation = UsersActivations::factory($user);
-        $activation->save();
-        $site->owner_id = $user->id;
-        return true;
+        $activation->save(true);
+        return $user;
     }
 }
