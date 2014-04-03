@@ -100,7 +100,7 @@ class CommonsApi_SiteController extends Omeka_Controller_AbstractActionControlle
 
         $user = $this->_helper->db->getTable('User')->findByEmail($site->admin_email);
         if(!empty($user)) {
-            return false;
+            return $user;
         }
 debug(print_r($site->toArray(), true));
         $user = new User();
